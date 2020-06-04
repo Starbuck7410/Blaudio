@@ -15,4 +15,6 @@ Go to the graph editor.<br>
 Find the little X at the end of the song.<br>
 Look at the frame number.<br>
 Set you scene to end there.)<br>
+<br>
+Example video: https://youtu.be/XIvE4nPoVFg
 
