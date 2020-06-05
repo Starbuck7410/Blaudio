@@ -18,3 +18,5 @@ Set you scene to end there.)<br>
 <br>
 Example video: https://youtu.be/XIvE4nPoVFg
 
+Cool shading trick to get Y scale data so you can get cool colors:
+![Shading trick!](https://i.imgur.com/K1rHb4E.png)
