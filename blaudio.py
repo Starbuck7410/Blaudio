@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blaudio",
     "author": "Shraga the Mighty Sky Worm",
-    "version": (1, 0),
+    "version": (1, 4),
     "blender": (2, 80, 0),
     "location": "Scene > Blaudio",
     "description": "Adds an audio visualizer.",
@@ -16,7 +16,7 @@ bl_info = {
 
 import bpy
 import os
-from bpy.props import StringProperty, BoolProperty, IntProperty
+from bpy.props import StringProperty, BoolProperty, IntProperty, FloatProperty
 from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
 
@@ -34,7 +34,7 @@ def setMaterial(ob, mat):
     me.materials.append(mat)
 
 
-def audiofy(file, bars = 24, barheight = 4, maxfreq = 20000, minfreq = 20):
+def audiofy(file, bars, barheight, maxfreq, minfreq, barwidth, interval, cubes, ds):
 
     c = 1
     l = 1
@@ -54,8 +54,11 @@ def audiofy(file, bars = 24, barheight = 4, maxfreq = 20000, minfreq = 20):
         #calculate the frequency
         h = minfreq * base ** ( c - 1 )
 
-        # add a plane
-        bpy.ops.mesh.primitive_plane_add(location = (c, 1, 0))
+        # add a plane / cube
+        if (cubes):
+            bpy.ops.mesh.primitive_cube_add(location = (c * interval, 1, 0))
+        else:
+            bpy.ops.mesh.primitive_plane_add(location = (c * interval, 1, 0))
         obj = bpy.context.active_object
         # set the material
         setMaterial(obj, white)
@@ -66,13 +69,13 @@ def audiofy(file, bars = 24, barheight = 4, maxfreq = 20000, minfreq = 20):
         bpy.context.scene.cursor.location = obj.location
         # move the cursor 1 unit down
         bpy.context.scene.cursor.location.y -= 1
-        # move the object origin to the cursor locationa
+        # move the object origin to the cursor location
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
 
         # scale the plane
-        obj.scale.x = 0.3
+        obj.scale.x = barwidth
         obj.scale.y = barheight
-        obj.scale.z = 1
+        obj.scale.z = barwidth
 
         # apply the scale
         bpy.ops.object.transform_apply(scale=True)
@@ -88,10 +91,19 @@ def audiofy(file, bars = 24, barheight = 4, maxfreq = 20000, minfreq = 20):
         bpy.context.area.type = 'GRAPH_EDITOR'
 
         # bake the sound into the plane
-        bpy.ops.graph.sound_bake(filepath=file, low=l, high=h, attack=0.001, release=0.2) #Replace this path with the path of your song
+        bpy.ops.graph.sound_bake(filepath=file, low=l, high=h, attack=0.001, release=0.2)
 
         # lock the y scaling just because
         obj.animation_data.action.fcurves[1].lock = True
+
+        obj.animation_data.action.fcurves[0].lock = False
+        obj.animation_data.action.fcurves[2].lock = False
+        bpy.ops.graph.select_all(action='SELECT')
+        bpy.ops.graph.delete()
+
+        # reset origin
+        if (ds):
+            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 
         # add 1 to the C value that is used to determine the frequency for the plane
         c += 1
@@ -104,6 +116,8 @@ def audiofy(file, bars = 24, barheight = 4, maxfreq = 20000, minfreq = 20):
     bpy.data.collections['Blaudio'].objects.link(obj)
 
     bpy.ops.sound.open(filepath=file, relative_path=False)
+
+    bpy.context.scene.cursor.location = [0, 0, 0]
 
 
 
@@ -121,20 +135,41 @@ class OT_TestOpenFilebrowser(Operator, ImportHelper):
         options={'HIDDEN'}
     )
 
-    bars: IntProperty(
-        default=24
+    Bars: IntProperty(
+        default=24,
+        soft_min=0
     )
 
-    barheight: IntProperty(
-        default=4
+    Bar_height: FloatProperty(
+        default=5
     )
 
-    maxfreq: IntProperty(
-        default=20000
+    Max_frequency: IntProperty(
+        default=20000,
+        soft_min=1
     )
 
-    minfreq: IntProperty(
-        default=20
+    Min_frequency: IntProperty(
+        default=20,
+        soft_min=1
+    )
+
+    Bar_width: FloatProperty(
+        default=0.4,
+        soft_min=0
+    )
+
+    Interval: FloatProperty(
+        default=1.0,
+        soft_min=0
+    )
+
+    Cubes: BoolProperty(
+        default=False
+    )
+
+    Dual_sided: BoolProperty(
+        default=False
     )
 
     # scenelength: BoolProperty(
@@ -142,9 +177,8 @@ class OT_TestOpenFilebrowser(Operator, ImportHelper):
     # )
 
     def execute(self, context):
-        """Do something with the selected file(s)."""
         filename, extension = os.path.splitext(self.filepath)
-        audiofy(self.filepath, self.bars, self.barheight, self.maxfreq, self.minfreq)
+        audiofy(self.filepath, self.Bars, self.Bar_height, self.Max_frequency, self.Min_frequency, self.Bar_width, self.Interval, self.Cubes, self.Dual_sided)
         # if (self.scenelength):
         #     print("ok")
         return {'FINISHED'}
